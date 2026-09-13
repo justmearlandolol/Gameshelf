@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>GameShelf</title>
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="#/library">
+      <img class="brand-logo" src="assets/logo.png" alt="">
+      <span class="brand-name">GameShelf</span>
+    </a>
+    <nav class="nav">
+      <a href="#/library" data-route="library">Library</a>
+      <a href="#/playing" data-route="playing">Playing Now</a>
+      <a href="#/completed" data-route="completed">Completed</a>
+      <a href="#/backlog" data-route="backlog">Backlog</a>
+      <a href="#/favorites" data-route="favorites">Favorites</a>
+    </nav>
+    <div class="nav-divider" role="separator"></div>
+    <nav class="nav" aria-label="Secondary">
+      <a href="#/statistics" data-route="statistics">Statistics</a>
+      <a href="#/settings" data-route="settings">Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="conn conn-connecting" id="connStatus"><span class="conn-dot" aria-hidden="true"></span><span class="conn-text">Connecting</span></span>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" hidden></div>
+  <div class="main-col">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="page-title" id="pageTitle">Library</h1>
+      <div class="topbar-actions">
+        <a class="btn btn-primary" href="#/add">Add Game</a>
+      </div>
+    </header>
+    <main class="view" id="main" tabindex="-1"></main>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ws.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
