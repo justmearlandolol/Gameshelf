@@ -126,6 +126,61 @@ function getgames(): game [] {
 }
 console.log(getgames());
 //Cari game
-function getGameByID(id: string): game [] | undefined {
-return Game;
+function getGameByID(id: string): game | undefined {
+  return Game.find(g => g._id === id);
 }
+console.log(getGameByID("99")?.title);
+
+//add game
+function addGame(game: game): void {
+  Game.push(game);
+}
+addGame({
+  _id: "99",
+  title: "God of War",
+  genre: "Action-Adventure",
+  platform: "PC",
+  status: "Library",
+  Playtime: 100,
+  lastplayed: new Date(),
+  notes: "God of War is a great game",
+  isFavorite: true,
+});
+//update game
+function updateGame(id: string, updates: Partial<game>): boolean {
+ const game = getGameByID(id);
+ if (!game) return false;
+ Object.assign(game, updates);
+ return true;
+}
+updateGame("99", {
+  status: "Playing Now",
+  Playtime: 100,
+  lastplayed: new Date(),
+  notes: "God of War is a great game",
+  isFavorite: true,
+});
+console.log(getGameByID("99")?.status);
+
+//delete game
+function deleteGame(id: string): boolean {
+  const index = Game.findIndex(g => g._id === id);
+  if (index === -1) return false;
+  Game.splice(index, 1);
+  return true;
+}
+deleteGame("99");
+console.log(getGameByID("99")?.title);
+
+//cari game dari judul
+function searchGame(query: string): game[] {
+  return Game.filter(g => g.title.toLowerCase().includes(query.toLowerCase()));
+}
+console.log(searchGame("God of War"));
+//GET game dari ID
+app.get("/api/games/:id", (req, res) => {
+    const game = getGameByID(req.params.id);
+
+    //Lanjut besok
+});
+
