@@ -1,9 +1,14 @@
 import express from "express";
+import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
+import path from "path";
 const app = express();
 const port = 3000;
 
 app.use(express.json());
-
+app.use(express.static(path.join(__dirname, "../Frontend")));
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "../Frontend/index.html"));
+});
 app.get("/api/games", (req, res) => {
     res.json(Game);
 });
@@ -181,6 +186,15 @@ console.log(searchGame("God of War"));
 app.get("/api/games/:id", (req, res) => {
     const game = getGameByID(req.params.id);
 
-    //Lanjut besok
+    if (!game) {
+    return res.status(404).json({
+        message: "Game not found"
+    });
+}
+return res.json(game)
 });
+// post
+app.post("/api/games", (res,req) =>{
+  //lanjut di kamar
+})
 
