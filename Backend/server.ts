@@ -208,18 +208,33 @@ return res.json(game)
 app.post("/api/games", (req,res) =>{
   const data = req.body as CreateGameRequest;
   const newGame: game = {
-    _id: String(Game.length + 1),
+    _id: String(Game.length + 1), // jelaskan ini mengapa harus pakai code yg ada di baris ini
     title: data.title,
     genre: data.genre,
     platform: data.platform as game["platform"],
     status: data.status as GameStats,
     Playtime: data.playtime,
-    lastplayed: new Date(), 
+    lastplayed: new Date(), //jelaskan ini mengapa harus pakai code yg ada di baris ini
     notes: data.notes,
     isFavorite: data.isFavorite,
   };
 
   addGame(newGame);
   return res.status(201).json(newGame);
-  //lanjut mongodb
+  
 });
+  //Bikin route patch
+  app.patch("/api/games/:id", (req, res) => {
+   const updated = updateGame(
+   req.params.id,
+   req.body
+   );  
+   if (!updated) {
+    return res.status(404).json({message:"Wrong Find buddy"});
+}
+
+const game = getGameByID(req.params.id);
+
+return res.status(200).json(game)
+});
+//lanjut besok delete route
