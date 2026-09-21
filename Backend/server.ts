@@ -1,3 +1,4 @@
+import { PartMediaResolutionLevel } from "@google/genai";
 import express from "express";
 import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
 import path from "path";
@@ -151,6 +152,16 @@ addGame({
   notes: "God of War is a great game",
   isFavorite: true,
 });
+//post interface
+interface CreateGameRequest {
+    title: string;
+    genre: string;
+    status: string;
+    playtime: number;
+    platform: string;
+    notes: string;
+    isFavorite: true,
+}
 //update game
 function updateGame(id: string, updates: Partial<game>): boolean {
  const game = getGameByID(id);
@@ -194,7 +205,21 @@ app.get("/api/games/:id", (req, res) => {
 return res.json(game)
 });
 // post
-app.post("/api/games", (res,req) =>{
-  //lanjut di kamar
-})
+app.post("/api/games", (req,res) =>{
+  const data = req.body as CreateGameRequest;
+  const newGame: game = {
+    _id: String(Game.length + 1),
+    title: data.title,
+    genre: data.genre,
+    platform: data.platform as game["platform"],
+    status: data.status as GameStats,
+    Playtime: data.playtime,
+    lastplayed: new Date(), 
+    notes: data.notes,
+    isFavorite: data.isFavorite,
+  };
 
+  addGame(newGame);
+  return res.status(201).json(newGame);
+  //lanjut mongodb
+});
