@@ -160,7 +160,7 @@ interface CreateGameRequest {
     playtime: number;
     platform: string;
     notes: string;
-    isFavorite: true,
+    isFavorite: boolean,
 }
 //update game
 function updateGame(id: string, updates: Partial<game>): boolean {
@@ -208,17 +208,20 @@ return res.json(game)
 app.post("/api/games", (req,res) =>{
   const data = req.body as CreateGameRequest;
   const newGame: game = {
-    _id: String(Game.length + 1), // jelaskan ini mengapa harus pakai code yg ada di baris ini
+    _id: String(Game.length + 1),
     title: data.title,
     genre: data.genre,
     platform: data.platform as game["platform"],
     status: data.status as GameStats,
     Playtime: data.playtime,
-    lastplayed: new Date(), //jelaskan ini mengapa harus pakai code yg ada di baris ini
+    lastplayed: new Date(), 
     notes: data.notes,
     isFavorite: data.isFavorite,
   };
-
+  //Validasi semua post
+if (!newGame.title || !newGame.genre || !newGame.platform || !newGame.status || newGame.Playtime === undefined|| !newGame.notes || newGame.isFavorite === undefined) {
+  return res.status(400).json({message:"All fields are required"});
+}
   addGame(newGame);
   return res.status(201).json(newGame);
   
@@ -237,4 +240,12 @@ const game = getGameByID(req.params.id);
 
 return res.status(200).json(game)
 });
-//lanjut besok delete route
+//delete route
+app.delete("/api/games/:id", (req, res) => {
+  const deleted = deleteGame(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({message:"404 Not Found"});
+}
+return res.status(200).json({message:"Game deleted successfully"});
+});
+  
