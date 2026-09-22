@@ -1,6 +1,7 @@
 import { PartMediaResolutionLevel } from "@google/genai";
 import express from "express";
 import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
+import { GridFSBucketWriteStream } from "mongodb";
 import path from "path";
 const app = express();
 const port = 3000;
@@ -248,4 +249,11 @@ app.delete("/api/games/:id", (req, res) => {
 }
 return res.status(200).json({message:"Game deleted successfully"});
 });
-  
+//Validasi Enum platform dan status
+function validatePlatform(platform: string): boolean {
+  return ['PC', 'SmartPhone', 'Tablet'].includes(platform);
+}
+function validateStatus(status: string): boolean {
+  return ['Library', 'Playing Now', 'Completed', 'Backlog', 'Favorites'].includes(status);
+}
+//validasi enum ke POST besok
