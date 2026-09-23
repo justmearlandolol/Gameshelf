@@ -1,4 +1,4 @@
-import { PartMediaResolutionLevel } from "@google/genai";
+import { PartMediaResolutionLevel, UploadToFileSearchStoreOperation } from "@google/genai";
 import express from "express";
 import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
 import { GridFSBucketWriteStream } from "mongodb";
@@ -205,39 +205,37 @@ app.get("/api/games/:id", (req, res) => {
 }
 return res.json(game)
 });
-// post
-app.post("/api/games", (req,res) =>{
-  const data = req.body as CreateGameRequest;
-  const newGame: game = {
-    _id: String(Game.length + 1),
-    title: data.title,
-    genre: data.genre,
-    platform: data.platform as game["platform"],
-    status: data.status as GameStats,
-    Playtime: data.playtime,
-    lastplayed: new Date(), 
-    notes: data.notes,
-    isFavorite: data.isFavorite,
-  };
-  //Validasi semua post
-if (!newGame.title || !newGame.genre || !newGame.platform || !newGame.status || newGame.Playtime === undefined|| !newGame.notes || newGame.isFavorite === undefined) {
-  return res.status(400).json({message:"All fields are required"});
-}
-  addGame(newGame);
-  return res.status(201).json(newGame);
-  
-});
-  //Bikin route patch
+//Bikin route patch dan validasi patch
   app.patch("/api/games/:id", (req, res) => {
+  const game = getGameByID(req.params.id);
+   if (!game){
+    return res.status(404).json({message:"Game not found"})
+   } 
    const updated = updateGame(
    req.params.id,
    req.body
-   );  
+   );
    if (!updated) {
     return res.status(404).json({message:"Wrong Find buddy"});
 }
+// [IN PROGRESS] PATCH validation
+// TODO: Validate platform when platform is included in req.body
+// TODO: Validate status when status is included in req.body
+// TODO: Make PATCH accept partial updates
+// TODO: Return the updated game instead of only true/false
 
-const game = getGameByID(req.params.id);
+// TODO: Improve PATCH error handling
+// TODO: Validate PATCH field types
+// TODO: Prevent invalid fields from being updated
+
+// TODO: Improve global error handling
+// TODO: Handle malformed JSON requests
+// TODO: Add consistent API error responses
+
+// TODO: Refactor project structure
+// TODO: Separate routes from business logic
+// TODO: Move types/interfaces into types.ts
+// TODO: Move database connection into db.ts
 
 return res.status(200).json(game)
 });
@@ -256,4 +254,52 @@ function validatePlatform(platform: string): boolean {
 function validateStatus(status: string): boolean {
   return ['Library', 'Playing Now', 'Completed', 'Backlog', 'Favorites'].includes(status);
 }
-//validasi enum ke POST besok
+//Error Handling
+app.post("/api/games", (req, res) => {
+
+  //Cek apakah body request valid
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({
+      message: "Invalid request body"
+    });
+  }
+
+  // kalo lolos, baru di "Anggap" sebagai CreateGameRequest
+ const data = req.body as CreateGameRequest;
+
+  //Buat newGame
+  const newGame: game = {
+    _id: String(Game.length + 1),
+    title: data.title,
+    genre: data.genre,
+    platform: data.platform as game["platform"],
+    status: data.status as GameStats,
+    Playtime: data.playtime,
+    lastplayed: new Date(),
+    notes: data.notes,
+    isFavorite: data.isFavorite,
+  };
+
+  // Validasi field
+  if (!newGame.title || !newGame.genre || !newGame.platform || !newGame.status || newGame.Playtime === undefined|| !newGame.notes || newGame.isFavorite === undefined) {
+    return res.status(400).json({
+      message: "All fields are required"
+    });
+  }
+
+  //Validasi enum
+  if (
+    !validatePlatform(data.platform) ||
+    !validateStatus(data.status)
+  ) {
+    return res.status(400).json({
+      message: "Invalid platform or status"
+    });
+  }
+
+  //Masukan game
+  addGame(newGame);
+
+  return res.status(201).json(newGame);
+});
+//Validasi Patch
