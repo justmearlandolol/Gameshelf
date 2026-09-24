@@ -1,5 +1,5 @@
 import { PartMediaResolutionLevel, UploadToFileSearchStoreOperation } from "@google/genai";
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
 import { GridFSBucketWriteStream } from "mongodb";
 import path from "path";
@@ -15,9 +15,6 @@ app.get("/api/games", (req, res) => {
     res.json(Game);
 });
 
-app.listen(port, () => {
-    console.log(`Backend running at http://localhost:${port}`);
-});
 type GameStats = 'Library' | 'Playing Now' | 'Completed' | 'Backlog' | 'Favorites'
 
 export interface game {
@@ -205,39 +202,51 @@ app.get("/api/games/:id", (req, res) => {
 }
 return res.json(game)
 });
-//Bikin route patch dan validasi patch
-  app.patch("/api/games/:id", (req, res) => {
+// Bikin route patch dan validasi patch
+app.patch("/api/games/:id", (req, res) => {
   const game = getGameByID(req.params.id);
-   if (!game){
-    return res.status(404).json({message:"Game not found"})
-   } 
-   const updated = updateGame(
-   req.params.id,
-   req.body
-   );
-   if (!updated) {
-    return res.status(404).json({message:"Wrong Find buddy"});
-}
-// [IN PROGRESS] PATCH validation
-// TODO: Validate platform when platform is included in req.body
-// TODO: Validate status when status is included in req.body
-// TODO: Make PATCH accept partial updates
-// TODO: Return the updated game instead of only true/false
 
-// TODO: Improve PATCH error handling
-// TODO: Validate PATCH field types
-// TODO: Prevent invalid fields from being updated
+  if (!game) {
+    return res.status(404).json({
+      message: "Game not found"
+    });
+  }
 
-// TODO: Improve global error handling
-// TODO: Handle malformed JSON requests
-// TODO: Add consistent API error responses
+  // Validasi platform kalau platform dikirim
+  if ("platform" in req.body) {
+    const platform = req.body.platform as string;
 
-// TODO: Refactor project structure
-// TODO: Separate routes from business logic
-// TODO: Move types/interfaces into types.ts
-// TODO: Move database connection into db.ts
+    if (!validatePlatform(platform)) {
+      return res.status(400).json({
+        message: "Invalid platform"
+      });
+    }
+  }
 
-return res.status(200).json(game)
+  // Validasi status kalau status dikirim
+  if ("status" in req.body) {
+    const status = req.body.status as string;
+
+    if (!validateStatus(status)) {
+      return res.status(400).json({
+        message: "Invalid status"
+      });
+    }
+  }
+
+  // Update game setelah semua validasi lolos
+  const updated = updateGame(
+    req.params.id,
+    req.body
+  );
+
+  if (!updated) {
+    return res.status(404).json({
+      message: "Wrong Find buddy"
+    });
+  }
+
+  return res.status(200).json(game);
 });
 //delete route
 app.delete("/api/games/:id", (req, res) => {
@@ -246,6 +255,11 @@ app.delete("/api/games/:id", (req, res) => {
     return res.status(404).json({message:"404 Not Found"});
 }
 return res.status(200).json({message:"Game deleted successfully"});
+});
+
+//Backend Frontend connection
+app.listen(port, () => {
+    console.log(`Backend running at http://localhost:${port}`);
 });
 //Validasi Enum platform dan status
 function validatePlatform(platform: string): boolean {
@@ -266,6 +280,18 @@ app.post("/api/games", (req, res) => {
 
   // kalo lolos, baru di "Anggap" sebagai CreateGameRequest
  const data = req.body as CreateGameRequest;
+ // Global Error Handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof SyntaxError) {
+    return res.status(400).json({
+      message: "Invalid JSON"
+    });
+  }
+
+  return res.status(500).json({
+    message: "Internal server error"
+  });
+});
 
   //Buat newGame
   const newGame: game = {
@@ -302,4 +328,3 @@ app.post("/api/games", (req, res) => {
 
   return res.status(201).json(newGame);
 });
-//Validasi Patch
