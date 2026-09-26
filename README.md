@@ -16,7 +16,7 @@
   </svg>
 </p>
 
-## 📖 What is GameShelf?
+## What is GameShelf?
 
 GameShelf is a game tracking application made for people who want a simple way to keep their gaming library organized.
 
