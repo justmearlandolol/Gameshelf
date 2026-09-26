@@ -98,7 +98,7 @@ GameShelf is currently under development, so the interface and features may cont
   </svg>
 </p>
 
-## 🛠️ Built With
+##  Built With
 
 GameShelf is currently being developed with:
 
@@ -114,7 +114,7 @@ GameShelf is currently **in development**.
 
 New features and improvements will be added over time.
 
-## 🗺️ Future Ideas
+## Future Ideas
 
 Some features that may be explored in the future include:
 
