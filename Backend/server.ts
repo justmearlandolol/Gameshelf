@@ -1,330 +1,222 @@
-import { PartMediaResolutionLevel, UploadToFileSearchStoreOperation } from "@google/genai";
 import express, { NextFunction, Request, Response } from "express";
-import { ReadWriteTransactionOptions } from "firebase-admin/firestore";
-import { GridFSBucketWriteStream } from "mongodb";
+import { ObjectId } from "mongodb";
+import { connectDB, getDB } from "./db";
 import path from "path";
+
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../Frontend")));
+
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "../Frontend/index.html"));
-});
-app.get("/api/games", (req, res) => {
-    res.json(Game);
+  res.sendFile(path.join(__dirname, "../Frontend/index.html"));
 });
 
-type GameStats = 'Library' | 'Playing Now' | 'Completed' | 'Backlog' | 'Favorites'
+// GET semua game dari MongoDB.
+app.get("/api/games", async (req, res, next) => {
+  try {
+    const games = getDB().collection("games");
+    return res.json(await games.find({}).toArray());
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Status game yang tersedia di GameShelf.
+type GameStats = "Library" | "Playing Now" | "Completed" | "Backlog" | "Favorites";
+type Platform = "PC" | "SmartPhone" | "Tablet";
+
+// Model data game. MongoDB membuat _id secara otomatis saat dokumen dimasukkan.
 
 export interface game {
-    _id?:string;
-    title: string;
-    genre: string;
-    platform: 'PC'| 'SmartPhone' | 'Tablet';
-    status: GameStats;
-    Playtime: number;
-    lastplayed: Date;
-    notes?:string;
-    isFavorite: boolean;
-    
+  _id?: string;
+  title: string;
+  genre: string;
+  platform: Platform;
+  status: GameStats;
+  Playtime: number;
+  lastplayed: Date;
+  notes?: string;
+  isFavorite: boolean;
 }
 
-// Gameshelf statistics
+// Statistik untuk dashboard GameShelf.
 export interface Gameshelfstats {
   totalGamesCount: number;
   playingNowCount: number;
   completedCount: number;
   backlogCount: number;
   favorites: number;
-  totalPlaytimeHours: string; 
-  completionRatePercentage: number; 
+  totalPlaytimeHours: string;
+  completionRatePercentage: number;
 }
 
-//in memory games array
-// menghitung stats dari array games
-function calstats(games: game[]):Gameshelfstats {
-    const totalgamescount = games.length;
-
-    const playingnowcount = games.filter(g => g.status === 'Playing Now').length
-    const favorites = games.filter(g => g.status === 'Favorites').length
-    const backlogCount = games.filter(g => g.status === 'Backlog').length
-    const completedCount = games.filter(g => g.status === 'Completed').length
-    // menghitung presentase game
-    const totalPlaytimeHours = games.reduce((total, g) => total + g.Playtime, 0).toString();
-    const completionRatePercentage = totalgamescount === 0
-      ? 0
-      : (completedCount / totalgamescount) * 100;
-
-    return {
-      totalGamesCount: totalgamescount,
-      playingNowCount: playingnowcount,
-      completedCount,
-      backlogCount,
-      favorites,
-      totalPlaytimeHours,
-      completionRatePercentage,
-    };
-}
-// game array
-const Game: game[] = [
-    {
-        _id: "1",
-        title: "Minecraft",
-        genre: "Sandbox",
-        platform: "PC",
-        status: "Playing Now",
-        Playtime: 20,
-        lastplayed: new Date(),
-        notes: "Survival",
-        isFavorite:true,
-    },
-        {
-        _id: "2",
-        title: "Terraria",
-        genre: "Sandbox",
-        platform: "PC",
-        status: "Completed",
-        Playtime: 40,
-        lastplayed: new Date(),
-        notes: "Finished main progression",
-        isFavorite:false,
-    },
-    {
-        _id: "3",
-        title: "Valorant",
-        genre: "FPS",
-        platform: "PC",
-        status: "Completed",
-        Playtime: 40,
-        lastplayed: new Date(),
-        notes: "Finished main progression",
-        isFavorite:true,
-    },
-      {
-        _id: "4",
-        title: "Roblox",
-        genre: "Simulator",
-        platform: "PC",
-        status: "Completed",
-        Playtime: 40,
-        lastplayed: new Date(),
-        notes: "Finished main progression",
-        isFavorite:true,
-    },
-      {
-        _id: "5",
-        title: "Mobile legends Bang Bang",
-        genre: "MOBA",
-        platform: "SmartPhone",
-        status: "Completed",
-        Playtime: 40,
-        lastplayed: new Date(),
-        notes: "Got a new hero",
-        isFavorite:true,
-    },
-  ];
-  
-function getgames(): game [] {
-  return Game;
-}
-console.log(getgames());
-//Cari game
-function getGameByID(id: string): game | undefined {
-  return Game.find(g => g._id === id);
-}
-console.log(getGameByID("99")?.title);
-
-//add game
-function addGame(game: game): void {
-  Game.push(game);
-}
-addGame({
-  _id: "99",
-  title: "God of War",
-  genre: "Action-Adventure",
-  platform: "PC",
-  status: "Library",
-  Playtime: 100,
-  lastplayed: new Date(),
-  notes: "God of War is a great game",
-  isFavorite: true,
-});
-//post interface
+// Interface request untuk membuat game baru melalui POST /api/games.
 interface CreateGameRequest {
-    title: string;
-    genre: string;
-    status: string;
-    playtime: number;
-    platform: string;
-    notes: string;
-    isFavorite: boolean,
+  title: string;
+  genre: string;
+  status: string;
+  playtime: number;
+  platform: string;
+  notes?: string;
+  isFavorite: boolean;
 }
-//update game
-function updateGame(id: string, updates: Partial<game>): boolean {
- const game = getGameByID(id);
- if (!game) return false;
- Object.assign(game, updates);
- return true;
-}
-updateGame("99", {
-  status: "Playing Now",
-  Playtime: 100,
-  lastplayed: new Date(),
-  notes: "God of War is a great game",
-  isFavorite: true,
-});
-console.log(getGameByID("99")?.status);
 
-//delete game
-function deleteGame(id: string): boolean {
-  const index = Game.findIndex(g => g._id === id);
-  if (index === -1) return false;
-  Game.splice(index, 1);
-  return true;
-}
-deleteGame("99");
-console.log(getGameByID("99")?.title);
-
-//cari game dari judul
-function searchGame(query: string): game[] {
-  return Game.filter(g => g.title.toLowerCase().includes(query.toLowerCase()));
-}
-console.log(searchGame("God of War"));
-//GET game dari ID
-app.get("/api/games/:id", (req, res) => {
-    const game = getGameByID(req.params.id);
-
-    if (!game) {
-    return res.status(404).json({
-        message: "Game not found"
-    });
-}
-return res.json(game)
-});
-// Bikin route patch dan validasi patch
-app.patch("/api/games/:id", (req, res) => {
-  const game = getGameByID(req.params.id);
-
-  if (!game) {
-    return res.status(404).json({
-      message: "Game not found"
-    });
-  }
-
-  // Validasi platform kalau platform dikirim
-  if ("platform" in req.body) {
-    const platform = req.body.platform as string;
-
-    if (!validatePlatform(platform)) {
-      return res.status(400).json({
-        message: "Invalid platform"
-      });
-    }
-  }
-
-  // Validasi status kalau status dikirim
-  if ("status" in req.body) {
-    const status = req.body.status as string;
-
-    if (!validateStatus(status)) {
-      return res.status(400).json({
-        message: "Invalid status"
-      });
-    }
-  }
-
-  // Update game setelah semua validasi lolos
-  const updated = updateGame(
-    req.params.id,
-    req.body
-  );
-
-  if (!updated) {
-    return res.status(404).json({
-      message: "Wrong Find buddy"
-    });
-  }
-
-  return res.status(200).json(game);
-});
-//delete route
-app.delete("/api/games/:id", (req, res) => {
-  const deleted = deleteGame(req.params.id);
-  if (!deleted) {
-    return res.status(404).json({message:"404 Not Found"});
-}
-return res.status(200).json({message:"Game deleted successfully"});
-});
-
-//Backend Frontend connection
-app.listen(port, () => {
-    console.log(`Backend running at http://localhost:${port}`);
-});
-//Validasi Enum platform dan status
 function validatePlatform(platform: string): boolean {
-  return ['PC', 'SmartPhone', 'Tablet'].includes(platform);
+  return ["PC", "SmartPhone", "Tablet"].includes(platform);
 }
+
 function validateStatus(status: string): boolean {
-  return ['Library', 'Playing Now', 'Completed', 'Backlog', 'Favorites'].includes(status);
+  return ["Library", "Playing Now", "Completed", "Backlog", "Favorites"].includes(status);
 }
-//Error Handling
-app.post("/api/games", (req, res) => {
 
-  //Cek apakah body request valid
-  if (!req.body || typeof req.body !== "object") {
-    return res.status(400).json({
-      message: "Invalid request body"
-    });
+// GET satu game berdasarkan MongoDB ObjectId.
+app.get("/api/games/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid game ID" });
+    }
+
+    const games = getDB().collection("games");
+    const foundGame = await games.findOne({ _id: new ObjectId(id) });
+    if (!foundGame) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    return res.json(foundGame);
+  } catch (error) {
+    return next(error);
   }
+});
 
-  // kalo lolos, baru di "Anggap" sebagai CreateGameRequest
- const data = req.body as CreateGameRequest;
- // Global Error Handler
+// PATCH memperbarui field game yang dikirim. Hanya field yang diizinkan yang boleh diubah.
+// Validasi platform/status tetap dilakukan sebelum update ke MongoDB.
+app.patch("/api/games/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid game ID" });
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const allowedFields = ["title", "genre", "platform", "status", "playtime", "notes", "isFavorite"];
+    const keys = Object.keys(body ?? {});
+    if (keys.length === 0 || keys.some((key) => !allowedFields.includes(key))) {
+      return res.status(400).json({ message: "Request must contain only editable game fields" });
+    }
+
+    if ("title" in body && (typeof body.title !== "string" || !body.title.trim())) {
+      return res.status(400).json({ message: "Invalid title" });
+    }
+    if ("genre" in body && (typeof body.genre !== "string" || !body.genre.trim())) {
+      return res.status(400).json({ message: "Invalid genre" });
+    }
+    if ("platform" in body && (typeof body.platform !== "string" || !validatePlatform(body.platform))) {
+      return res.status(400).json({ message: "Invalid platform" });
+    }
+    if ("status" in body && (typeof body.status !== "string" || !validateStatus(body.status))) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+    if ("playtime" in body && (typeof body.playtime !== "number" || !Number.isFinite(body.playtime) || body.playtime < 0)) {
+      return res.status(400).json({ message: "Invalid playtime" });
+    }
+    if ("notes" in body && typeof body.notes !== "string") {
+      return res.status(400).json({ message: "Invalid notes" });
+    }
+    if ("isFavorite" in body && typeof body.isFavorite !== "boolean") {
+      return res.status(400).json({ message: "Invalid isFavorite" });
+    }
+
+    const games = getDB().collection("games");
+    const result = await games.updateOne({ _id: new ObjectId(id) }, { $set: body });
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    return res.status(200).json(await games.findOne({ _id: new ObjectId(id) }));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /api/games — masukkan game baru ke MongoDB menggunakan insertOne().
+app.post("/api/games", async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+
+    if (
+      !body ||
+      typeof body.title !== "string" || !body.title.trim() ||
+      typeof body.genre !== "string" || !body.genre.trim() ||
+      typeof body.platform !== "string" ||
+      typeof body.status !== "string" ||
+      typeof body.playtime !== "number" ||
+      !Number.isFinite(body.playtime) || body.playtime < 0 ||
+      typeof body.isFavorite !== "boolean" ||
+      (body.notes !== undefined && typeof body.notes !== "string")
+    ) {
+      return res.status(400).json({ message: "Invalid or missing game fields" });
+    }
+
+    if (!validatePlatform(body.platform) || !validateStatus(body.status)) {
+      return res.status(400).json({ message: "Invalid platform or status" });
+    }
+
+    // Buat dokumen baru. MongoDB akan menghasilkan _id secara otomatis.
+    const newGame = {
+      title: body.title.trim(),
+      genre: body.genre.trim(),
+      platform: body.platform,
+      status: body.status,
+      playtime: body.playtime,
+      notes: body.notes,
+      isFavorite: body.isFavorite,
+      lastplayed: new Date()
+    };
+
+    const games = getDB().collection("games");
+    // Masukkan game baru ke collection games.
+    const result = await games.insertOne(newGame);
+    const insertedGame = await games.findOne({ _id: result.insertedId });
+    return res.status(201).json(insertedGame);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// DELETE menghapus game dari MongoDB berdasarkan ObjectId.
+app.delete("/api/games/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid game ID" });
+    }
+
+    const games = getDB().collection("games");
+    const result = await games.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    return res.status(200).json({ message: "Game deleted successfully" });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Global Error Handler: middleware ini harus diletakkan setelah semua route.
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof SyntaxError) {
-    return res.status(400).json({
-      message: "Invalid JSON"
-    });
+  console.error(err);
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({ message: "Invalid JSON" });
   }
+  return res.status(500).json({ message: "Internal server error" });
+});
 
-  return res.status(500).json({
-    message: "Internal server error"
+// Jalankan server hanya setelah koneksi MongoDB berhasil.
+connectDB()
+  .then(() => {
+    app.listen(port, () => console.log(`Server running on port ${port}`));
+  })
+  .catch((error) => {
+    console.error("Failed to connect to MongoDB:", error);
   });
-});
-
-  //Buat newGame
-  const newGame: game = {
-    _id: String(Game.length + 1),
-    title: data.title,
-    genre: data.genre,
-    platform: data.platform as game["platform"],
-    status: data.status as GameStats,
-    Playtime: data.playtime,
-    lastplayed: new Date(),
-    notes: data.notes,
-    isFavorite: data.isFavorite,
-  };
-
-  // Validasi field
-  if (!newGame.title || !newGame.genre || !newGame.platform || !newGame.status || newGame.Playtime === undefined|| !newGame.notes || newGame.isFavorite === undefined) {
-    return res.status(400).json({
-      message: "All fields are required"
-    });
-  }
-
-  //Validasi enum
-  if (
-    !validatePlatform(data.platform) ||
-    !validateStatus(data.status)
-  ) {
-    return res.status(400).json({
-      message: "Invalid platform or status"
-    });
-  }
-
-  //Masukan game
-  addGame(newGame);
-
-  return res.status(201).json(newGame);
-});
