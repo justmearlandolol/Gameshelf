@@ -13,7 +13,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../Frontend/index.html"));
 });
 
-// GET semua game dari MongoDB.
+//GET semua game dari MongoDB.
 app.get("/api/games", async (req, res, next) => {
   try {
     const games = getDB().collection("games");
@@ -23,11 +23,9 @@ app.get("/api/games", async (req, res, next) => {
   }
 });
 
-// Status game yang tersedia di GameShelf.
 type GameStats = "Library" | "Playing Now" | "Completed" | "Backlog" | "Favorites";
 type Platform = "PC" | "SmartPhone" | "Tablet";
 
-// Model data game. MongoDB membuat _id secara otomatis saat dokumen dimasukkan.
 
 export interface game {
   _id?: string;
@@ -90,7 +88,6 @@ app.get("/api/games/:id", async (req, res, next) => {
   }
 });
 
-// PATCH memperbarui field game yang dikirim. Hanya field yang diizinkan yang boleh diubah.
 // Validasi platform/status tetap dilakukan sebelum update ke MongoDB.
 app.patch("/api/games/:id", async (req, res, next) => {
   try {
@@ -184,7 +181,7 @@ app.post("/api/games", async (req, res, next) => {
   }
 });
 
-// DELETE menghapus game dari MongoDB berdasarkan ObjectId.
+//DELETE menghapus game dari MongoDB berdasarkan ObjectId.
 app.delete("/api/games/:id", async (req, res, next) => {
   try {
     const id = req.params.id;
@@ -203,7 +200,7 @@ app.delete("/api/games/:id", async (req, res, next) => {
   }
 });
 
-// Global Error Handler: middleware ini harus diletakkan setelah semua route.
+// Global Error Handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   if (err instanceof SyntaxError && "body" in err) {
@@ -212,7 +209,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   return res.status(500).json({ message: "Internal server error" });
 });
 
-// Jalankan server hanya setelah koneksi MongoDB berhasil.
 connectDB()
   .then(() => {
     app.listen(port, () => console.log(`Server running on port ${port}`));
