@@ -13,6 +13,7 @@ interface Game {
   genre: string;
   platform: "PC" | "Smartphone" | "Tablet" | "Console";
   playtime?: number;
+  isFavorite?: boolean;
 }
 
 async function main() {
@@ -48,6 +49,19 @@ async function main() {
       .limit(2)
       .toArray();
     console.log(search);
+
+    //projection 
+    const results = await games.find({
+        isFavorite: true
+      })
+      .project({
+        _id: 0,
+        title: 1,
+        genre: 1
+      })
+      .toArray();
+
+      console.log(results);
 
     await games.findOne({
       title: "Test Game",
