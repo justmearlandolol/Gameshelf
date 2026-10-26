@@ -24,7 +24,7 @@ app.get("/api/games", async (req, res, next) => {
 });
 
 type GameStats = "Library" | "Playing Now" | "Completed" | "Backlog" | "Favorites";
-type Platform = "PC" | "SmartPhone" | "Tablet";
+type Platform = "PC" | "Smartphone" | "Tablet";
 
 
 export interface game {
@@ -33,7 +33,7 @@ export interface game {
   genre: string;
   platform: Platform;
   status: GameStats;
-  Playtime: number;
+  playtime: number;
   lastplayed: Date;
   notes?: string;
   isFavorite: boolean;
@@ -62,7 +62,7 @@ interface CreateGameRequest {
 }
 
 function validatePlatform(platform: string): boolean {
-  return ["PC", "SmartPhone", "Tablet"].includes(platform);
+  return ["PC", "Smartphone", "Tablet"].includes(platform);
 }
 
 function validateStatus(status: string): boolean {
