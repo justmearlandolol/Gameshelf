@@ -24,18 +24,6 @@ async function main() {
     const db = client.db("gameshelf");
     const games = db.collection<Game>("games");
 
-    await games.insertOne({
-      title: "Minecraft",
-      genre: "Sandbox",
-      platform: "PC",
-    });
-    await games.insertOne({
-      title: "Apex Legends",
-      genre: "Battle Royale",
-      platform: "PC",
-      playtime: 200,
-    });
-    console.log("Games inserted");
 
     const search = await games
       .find({
@@ -76,24 +64,39 @@ async function main() {
     } else {
       console.log("Found Game:", data);
     }
+    // Aggregation
+    const hasil = await games.aggregate([
+      {
+        $group: {
+          _id: "$platform",
+          totalPlaytime: { $sum: "$playtime" }
+        }
+      }
+    ]).toArray();
 
-    const result = await games.updateMany(
-      { title: "Minecraft" },
-      { $set: { platform: "Smartphone" } }
-    );
-    if (result.matchedCount === 0) {
-      console.warn("Tidak ada dokumen yang cocok untuk di-update");
+    console.log(hasil);
+
+const completedStats = await games.aggregate([
+  {
+    $match: {
+      status: "Completed"
     }
-    console.log(result);
-
-    const remove = await games.deleteMany({ title: "Minecraft" });
-    if (remove.deletedCount === 0) {
-      console.warn("Tidak ada dokumen yang dihapus");
+  },
+  {
+    $group: {
+      _id: "$genre",
+      totalPlaytime: { $sum: "$playtime" }
     }
-    console.log(remove);
+  },
+  {
+    $sort: {
+      totalPlaytime: 1
+    }
+  }
+]).toArray();
 
-    const deletedGame = await games.findOne<Game>({ title: "Minecraft" });
-    console.log(deletedGame);
+console.log(completedStats);
+
 
     const id = "6ab52b966d09bdd8046afe1d";
     if (!ObjectId.isValid(id)) {
@@ -110,5 +113,6 @@ async function main() {
     console.log("MongoDB connection closed");
   }
 }
+
 
 main(); 
