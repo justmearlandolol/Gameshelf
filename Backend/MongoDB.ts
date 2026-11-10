@@ -51,12 +51,6 @@ async function main() {
 
       console.log(results);
 
-    await games.findOne({
-      title: "Test Game",
-      genre: "Test Genre",
-      platform: "Console",
-      playtime: 100,
-    });
 
     const data = await games.findOne<Game>({ title: "Minecraft" });
     if (!data) {
@@ -64,6 +58,22 @@ async function main() {
     } else {
       console.log("Found Game:", data);
     }
+    // $project aggregation
+    const platformStats = await games.aggregate([{
+    $group: {
+      _id: "$platform",
+      totalPlaytime: { $sum: "$playtime" }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      platform: "$_id",
+      totalPlaytime: 1
+    }
+  }
+    ]).toArray();    
+console.log(platformStats);
     // Aggregation
     const hasil = await games.aggregate([
       {
@@ -76,12 +86,7 @@ async function main() {
 
     console.log(hasil);
 
-const completedStats = await games.aggregate([
-  {
-    $match: {
-      status: "Completed"
-    }
-  },
+const topGenres = await games.aggregate([
   {
     $group: {
       _id: "$genre",
@@ -90,15 +95,41 @@ const completedStats = await games.aggregate([
   },
   {
     $sort: {
-      totalPlaytime: 1
+      totalPlaytime: -1
+    }
+  },
+  {
+    $limit: 5
+  }
+]).toArray();
+
+console.log(topGenres);
+
+const platformAverage = await games.aggregate([
+  {
+    $group: {
+      _id: "$platform", //kelompokkan berdasarkan platform
+      averagePlaytime: { $avg: "$playtime" } //rata rata playtime 
     }
   }
 ]).toArray();
 
-console.log(completedStats);
+console.log(platformAverage);
 
+const genreStats = await games.aggregate([
+  {
+    $group: {
+      _id: "$genre",
+      minPlaytime: { $min: "$playtime" },
+      maxPlaytime: { $max: "$playtime" },
+      averagePlaytime: { $avg: "$playtime" }
+    }
+  }
+]).toArray();
 
-    const id = "6ab52b966d09bdd8046afe1d";
+console.log(genreStats);
+
+const id = "6ab52b966d09bdd8046afe1d";
     if (!ObjectId.isValid(id)) {
       console.error("ObjectId tidak valid:", id);
     } else {
@@ -115,5 +146,4 @@ console.log(completedStats);
 }
 
 
-
-main(); 
+main();
