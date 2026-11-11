@@ -116,6 +116,20 @@ const platformAverage = await games.aggregate([
 
 console.log(platformAverage);
 
+const platformGames = await games.aggregate([
+  {
+    $group: {
+      _id: "$platform",
+      games: { $push: "$title" }, //mengelompokkan judul game berdasarkan platform
+      platformgames: { $push: "$title" }, //mengelompokkan judul game berdasarkan platform
+      total: { $sum: 1 } //menghitung jumlah game per platform
+    
+    }
+  }
+]).toArray();
+
+console.log(platformGames);
+
 const genreStats = await games.aggregate([
   {
     $group: {
